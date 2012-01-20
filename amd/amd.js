@@ -1,5 +1,7 @@
 (function( window, steal, undefined ) {
 
+	console.log = console.info;
+
 	// Grab helper functions off of steal
 	var each			= steal.each,
 		extend			= steal.extend,
@@ -8,6 +10,7 @@
 		isObject		= steal.isObject,
 		URI				= steal.URI,
 		error			= steal.error,
+		Deferred		= steal.Deferred,
 		isEmptyObject	= function( o ) {
 			for ( var name in o ) {
 				return false;
@@ -25,7 +28,7 @@
 		map				= function( arr, callback ) {
 			var results = [];
 			each( arr, function( i, value ) {
-				var temp = callback.call( arr, value, i, arr );
+				var temp = callback ? callback.call( arr, value, i, arr ) : value;
 				if ( temp !== false ) {
 					results.push( temp );
 				}
@@ -37,6 +40,8 @@
 		modules			= {},
 		// Array to store what's current being required to track circular
 		// dependencies
+		idQueue			= [],
+		defineQueue		= [],
 		requiring		= [],
 		getUnmet		= function( needs ) {
 			return map( needs || [], function( id ) {
@@ -77,7 +82,42 @@
 					return currentPage + "/" + uri + ".js";
 				});
 			}
-		}());
+		}()),
+		evalDefine		= function( id, deps, factory ) {
+			var exports = {},
+				module = {};
+
+			// Replace module and exports in the deps if they exist
+			if ( deps ) {
+				each({
+					"module" : module,
+					"exports" : exports
+				}, function( key, value ) {
+					var index = indexOf( deps, key );
+					if ( index > -1 ) {
+						deps.splice( index, 1, value );
+					}
+				});
+			}
+
+			args = getArgs( deps );
+
+			definition = isFunction( factory ) ? 
+				factory.apply( window, args ) : 
+				factory;
+
+			/**/
+			if ( ! isEmptyObject( exports )) {
+				modules[ id ] = exports;
+			} else if ( ! isEmptyObject( module )) {
+				modules[ id ] = module;
+			} else {
+				modules[ id ] = definition;
+			}
+			modules[ id ].module = {
+				id : id
+			}
+		}
 	
 	// Add globals to the window
 	extend( window, {
@@ -85,112 +125,139 @@
 		// cases to handle:
 		// define ("foo", ["bar", "lol", "wat"], function() {});
 		// define ("foo", ["bar", "lol", "wat"], {});
-		define: function( id, dependencies, factory ) {
+		define: function( id, deps, factory ) {
 
-			var resolveCallback = function() {
-				console.log( "define callback", arguments, this );
-					var exports = {},
-						module = {},	
-						definition, args, key;
-					
-					if ( dependencies ) {
-						each( dependencies, function( i, id ) {
-							if ( id === "module" ) {
-								dependencies.splice( i, 1, module );
-							}
-							if ( id === "exports" ) {
-								dependencies.splice( i, 1, exports );
-							}
-						});
-					}
-					args = getArgs( dependencies );
-
-					definition = isFunction( factory ) ? 
-						factory.apply( window, args ) : 
-						factory;
-
-					if ( id ) {
-						if ( ! isEmptyObject( exports )) {
-							modules[ id ] = exports;
-						} else if ( ! isEmptyObject( module )) {
-							modules[ id ] = module;
-						} else {
-							modules[ id ] = definition;
-						}
-						modules[ id ].module = {
-							id : id
-						}
-					} else {
-						extend( modules, definition );
-					}
-				},
+			var deferred = new Deferred(),
 				unmet;
 
-			if ( id && dependencies && ! factory ) {
+			//console.info( "define(", id, deps, factory, ") - init");
+
+			// A bunch of checks to figure out what we actually have for
+			// arguments
+			if ( id && deps && ! factory ) {
 				
 				// define ("foo", function() {});
 				// define ("foo", {});
 				if ( isString( id ) ) {
-					factory = dependencies;
-					dependencies = undefined;
+					factory = deps;
+					deps = undefined;
 
 				// define (["bar", "lol", "wat"], function() {});
 				// define (["bar", "lol", "wat"], {});
 				} else {
-					factory = dependencies;
-					dependencies = id;
+					factory = deps;
+					deps = id;
+					id = undefined;
 				}
 
 			// define (function() {});
 			// define ({});
-			} else if ( id && ! dependencies && ! factory ) {
+			} else if ( id && ! deps && ! factory ) {
 				factory = id;
 				id = undefined;
 			}
+			deps = deps || [];
 
-			unmet = getUnmet( dependencies );
+			console.log("pushing", [ id, deps, factory ], "onto defineQueue");
+			defineQueue.push([ id, deps, factory ]);
+
+			unmet = getUnmet( deps );
+			
+			// If we have unmet deps
 			if ( unmet.length ) {
-				require.call( window, unmet, resolveCallback );
-			} else {
-				resolveCallback();
+				Deferred
+					.when( map( unmet, function( id, i ) {
+						var dfd = new Deferred();
+						require( [id], function() {
+							dfd.resolve();
+						});
+						return dfd;
+					}))
+					.done(function() {
+						deferred.resolve();
+					});
 			}
+			// No unmet deps, just resolve!
+			else {
+				deferred.resolve();
+			}
+
 		},
 
-		require: function( needs, callback ) {
+		require: function( deps, callback ) {
 
-			var resolveCallback = function() {
-				console.log( "require callback", arguments, this );
-					each( unmet, function( i, id ) {
-						requiring.splice( indexOf( requiring, id ), 1);
-					});
-					callback.apply( window, getArgs( needs ));
-				},
-				unmet;
+			var deferred, unmet, uris;
 
 			// Synchronous call
-			if ( isString( needs )) {
-				if ( modules[ needs ] ) {
-					return modules[ needs ];
+			if ( isString( deps )) {
+				if ( modules[ deps ] ) {
+					return modules[ deps ];
 				} else {
 					error( "Synchronous require: no module definition " + 
-						"exists for " + needs );
+						"exists for " + deps );
 				}
 
-			// Asynchronous
+			// Asynchronous call
 			} else {
 
-				unmet = getUnmet( needs );
+				// Create a deferred to control flow
+				deferred = new Deferred();
 
+				deferred.done(function() {
+					while( defineQueue.length ) {
+						var id, args;
+						id = idQueue.shift(); 
+						args = defineQueue.shift();
+						args[0] = args[0] || id;
+						console.info("defining module with args", args );
+						evalDefine.apply( window, args);
+					}
+					callback.apply( window, getArgs( deps ));
+				});
+
+				// Get the list of unmet dependencies 
+				unmet = getUnmet( deps );
+
+				// If we have unmet dependencies
 				if ( unmet.length ) {
-					requiring.push.apply( requiring, unmet );
-					steal
-						.apply( steal, resolveUris( unmet ))
-						.then( resolveCallback );
-				} else {
-					resolveCallback();
+
+					// Keep track of what we're requiring so we can track down
+					// circular dependencies
+					requiring = requiring.concat( unmet );
+
+					// Get the URIs of all the unmet dependencies
+					uris = resolveUris( unmet )
+
+					// Get a single callback for when all the unment
+					// dependencies have loaded
+					Deferred.when.apply( Deferred, map( uris, function( dep, i ) {
+						var innerDeferred = new Deferred();
+						console.log("stealing", dep);
+						steal( dep, function() {
+							console.log("in then for", dep);
+							idQueue.push( unmet[i] ); 
+							innerDeferred.resolve(unmet[i]);
+						});
+						return innerDeferred;
+					})).done(function() {
+						console.log("DONE", arguments);
+
+						// Clean up our requiring list for circular deps 
+						each( unmet, function( i, id ) {
+							requiring.splice( indexOf( requiring, id ), 1);
+						});
+
+						// if there's a callback, call it with the dependencies
+						deferred.resolve();
+
+					});
+				}
+				// No unmet dependencies, just resolve!
+				else {
+					deferred.resolve();
 				}
 			}
-
+			return deferred;
 		}
 
 	});
