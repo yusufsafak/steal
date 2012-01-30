@@ -11,7 +11,16 @@ module("steal")
 	};
 	
 	
-	
+if(window !== window.parent && window.parent.QUnit){
+	var methods = ["module", "test", "start", "stop", "equals", "ok", "same", "equal", "expect"];
+	for(var i=0; i<methods.length; i++){
+		(function(method){
+			window[method] = function(){
+				window.parent[method].apply(this, arguments);
+			}
+		})(methods[i])
+	}
+}
 
 // testing new steal API
 	
@@ -284,10 +293,11 @@ test("File.isDomainAbsolute()", function() {
 	ok(!result, "/a/b/c/d/e domain is absolute.");
 })
 
-test("File.afterDomain", function() {
-	result = new steal.File("http://abc.com/d/e").afterDomain();
-	equals(result, "/d/e", "/d/e is the correct after domain result.");
-})
+// this function was moved to steal/rhino/file.js
+// test("File.afterDomain", function() {
+	// result = new steal.File("http://abc.com/d/e").afterDomain();
+	// equals(result, "/d/e", "/d/e is the correct after domain result.");
+// })
 
 test("File.toReferenceFromSameDomain()", function() {
 	result = new steal.File("http://abc.com/d/e").toReferenceFromSameDomain("http://abc.com/d/e/f/g/h");

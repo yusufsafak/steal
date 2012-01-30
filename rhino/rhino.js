@@ -1,5 +1,14 @@
 // A Rhino-version of steal
-(function(win, _args){
+(function(win){
+	
+	if(typeof console == 'undefined'){
+		console = {
+			log: function(){
+				print.apply(null, arguments)
+			}
+		}
+	}
+	
 	win.steal = {
 		engine : "rhino",
 		

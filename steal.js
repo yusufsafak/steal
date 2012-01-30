@@ -284,9 +284,9 @@
 	 * production builds, add the following around
 	 * the code blocks.
 	 *
-	 *     //@steal-remove-start
+	 *     //!steal-remove-start
 	 *         code to be removed at build
-	 *     //@steal-remove-end
+	 *     //!steal-remove-end
 	 * 
 	 * ### Lookup Paths
 	 * 
@@ -449,10 +449,6 @@
 		}
 	};
 	
-	var fullurl = /^([A-Za-z]+)?(:?\/\/)([0-9.\-A-Za-z]*)(?::(\d+))?(.*)$/;
-	// path, query, fragment
-	var parse_leftovers = /([^?#]*)?(?:\?([^#]*))?(?:#(.*))?$/;
-	
 
 	extend(File.prototype,
 	/**
@@ -572,10 +568,6 @@
 		relative: function() {
 			return this.path.match(/^(https?:|file:|\/)/) === null;
 		},
-		// Returns the part of the path that is after the domain part
-		afterDomain: function() {
-			return this.path.match(/https?:\/\/[^\/]*(.*)/)[1];
-		},
 		/**
 		 * Returns the relative path between two paths with common folders.
 		 * @codestart
@@ -607,13 +599,6 @@
 		protocol: function() {
 			var match = this.path.match(/^(https?:|file:)/);
 			return match && match[0];
-		},
-
-
-		getAbsolutePath: function() {
-			var dir = File.cur().dir(),
-				fwd = File(dir);
-			return fwd.relative() ? fwd.joinFrom(steal.root.path, true) : dir;
 		},
 		/**
 		 * For a given path, a given working directory, and file location, update the path so 
@@ -707,7 +692,7 @@
 						File.cur(path);
 						
 						// call the function, someday soon this will be requireJS-like
-						options(steal.send || win.jQuery || steal); 
+						options(steal.send || win.jQuery || win.Zepto || steal); 
 					},
 					rootSrc: path,
 					orig: options,
@@ -1100,7 +1085,7 @@
 			}
 		},
 		trigger : function(event, arg){
-			var arr = events[event] || [];
+			var arr = events[event] || [],
 				copy = [];
 			// array items might be removed during each iteration (with unbind), so we iterate over a copy
 			for(var i =0, len = arr.length; i <len; i++){
@@ -1135,23 +1120,6 @@
 			steal.preloaded(stel);
 			stel.loaded()
 			return steal;
-		},
-		// return the parent steal window
-		// useful for situations where a parent window opens other windows (funcunit)
-		parentWindow: function(){
-			var parent = win;
-			// selenium throws access denied error when try to access opener.steal from console window
-			try{
-				// if instrument is set, or my parent has it set (for apps with frames)
-				if(parent.top.opener && parent.top.opener.steal){
-					parent = parent.top.opener;
-				}
-				else if(parent.top.opener.selenium) {
-					// TODO move this to the selenium browser plugin
-					parent = parent.top.opener.selenium.browserbot.getCurrentWindow()
-				}
-			} catch(e){}
-			return parent;
 		}
 	});
 	
@@ -1448,13 +1416,11 @@ steal.type("css", function css_type(options, success, error){
 });
 
 // Overwrite
-(function(){
-	if(opts.types){
-		for(var type in opts.types){
-			steal.type(type, opts.types[type]);
-		}
+if(opts.types){
+	for(var type in opts.types){
+		steal.type(type, opts.types[type]);
 	}
-}());
+}
 
 
 // =============================== HELPERS ===============================
@@ -1479,9 +1445,9 @@ request = function(options, success, error){
 		check = function(){
 			if ( request.readyState === 4 )  {
 				if ( request.status === 500 || request.status === 404 || 
-					 request.status === 2 || 
+					 request.status === 2 || request.status < 0 || 
 					 (request.status === 0 && request.responseText === '') ) {
-					error && error();
+					error && error(request.status);
 					clean();
 				} else {
 					success(request.responseText);
@@ -1504,9 +1470,11 @@ request = function(options, success, error){
 		request.send(null);
 	}
 	catch (e) {
-		console.error(e);
-		error && error();
-		clean();
+		if (clean) {
+			console.error(e);
+			error && error();
+			clean();
+		}
 	}
 			 
 };
@@ -1795,13 +1763,6 @@ request = function(options, success, error){
 	
 	// =========== DEBUG =========
 	
-	if(steal.isRhino && typeof console == 'undefined'){
-		console = {
-			log: function(){
-				print.apply(null, arguments)
-			}
-		}
-	}
 	/*var name = function(stel){
 		if(stel.options && stel.options.type == "fn"){
 			return stel.options.orig.toString().substr(0,50)
@@ -1957,7 +1918,7 @@ if (support.interactive) {
 	steal.after = after(steal.after, function(){
 		var interactive = getCachedInteractiveScript();
 		// if no interactive script, this is a steal coming from inside a steal, let complete handle it
-		if (!interactive || !interactive.src || /steal\.(production\.)*js/.test(interactive.src)) {
+		if (!interactive || !interactive.src || /steal\.(production|production\.[a-zA-Z0-9\-\.\_]*)*js/.test(interactive.src)) {
 			return;
 		}
 		// get the source of the script
@@ -2096,17 +2057,20 @@ if (support.interactive) {
 			else if(options.startFiles && options.startFiles.length){
 				startFiles = options.startFiles;
 			}
-			if ( options.instrument || (steal.parentWindow().steal.options.instrument) ) {
-				startFiles.unshift({
-					src: "steal/instrument",
-					waits: true
-				});
-			}
 			var steals = [];
 			// need to load startFiles in dev or production mode (to run funcunit in production)
 			if( startFiles.length ){
 				steal.options.startFiles = startFiles;
 				steals.push.apply(steals, startFiles)
+			}
+			// either instrument is in this page (if we're the window opened from steal.browser), or its opener has it
+			if ( options.instrument || (!options.browser && win.top && win.top.opener && 
+					win.top.opener.steal && win.top.opener.steal.options.instrument) ) {
+				// force startFiles to load before instrument
+				steals.push(function(){}, {
+					src: "steal/instrument",
+					waits: true
+				});
 			}
 			//we only load things with force = true
 			if (options.env == 'production' && options.loadProduction) {
