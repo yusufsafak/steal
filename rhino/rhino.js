@@ -1,5 +1,5 @@
 // A Rhino-version of steal
-(function(win){
+(function(win, _args){
 	
 	if(typeof console == 'undefined'){
 		console = {
