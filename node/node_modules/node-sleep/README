@@ -1,0 +1,5 @@
+Sleep sync function for node.js
+
+1) get this module (git clone git://github.com/progman/node-sleep.git)
+1) build this module (node-waf configure build)
+2) use this module (see example)

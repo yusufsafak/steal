@@ -1,5 +1,4 @@
 steal("steal/get/json.js", 
-	  "steal/rhino/prompt.js", 
 	  "steal/get/dummy.js",function( steal ) {
 	
 	// a map of plugins that you just installed (prevents cycles)

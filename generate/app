@@ -5,7 +5,7 @@ if (!_args[0]) {
 	quit();
 }
 
-steal('steal/generate','steal/generate/system.js',function(steal){
+steal('steal/generate',function(steal){
 	var path =  _args[0].toLowerCase().replace('.',"/");
 	var	data = steal.extend({
 		path: path, 

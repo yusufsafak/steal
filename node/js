@@ -6,4 +6,4 @@ shift
 # make this dir the require path
 export NODE_PATH="$PWD"
 
-node steal/node/node.js "$SCRIPT" "$@"
+node steal/node/bootstrap.js "$SCRIPT" "$@"
