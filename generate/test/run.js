@@ -1,5 +1,3 @@
-load('steal/rhino/rhino.js')
-
 steal('steal/test', "steal/generate")
 	.then(function(s){
 	_S = steal.test;

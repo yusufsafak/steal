@@ -1,4 +1,3 @@
-;
 (function( steal ) {
 
 	var extend = function( d, s ) {
@@ -261,7 +260,7 @@
 					}
 				}
 			}
-			me["delete"]()
+			return me["delete"]()
 		},
 		zipDir: function( name, replacePath ) {
 			var dirObj = new java.io.File(this.path);

@@ -1,8 +1,9 @@
 (function(win){
 	
+	var fs = require('fs'),
+		path = require('path');
+	
 	win.steal = {
-		//isRhino : true,
-		
 		engine : "node",
 		
 		types : {
@@ -10,22 +11,24 @@
 				if(options.text){
 					eval(text)
 				}else{
-					console.log('stealing', options.src);
 					require(options.src);
 				}
 				success()
 			}
 		}
-	}
+	};
+	
+	win.readFile = function( pathname ){
+		return fs.readFileSync(pathname, 'utf8');
+	};
+	
+	win.print = function(){
+		console.log.apply(console, arguments);
+	};
 	
 	require("steal/steal.js");
 	require("steal/node/file.js");
 	require("steal/node/system.js");
 	require("steal/node/prompt.js");
 	
-	var script = process.argv[2]
-	win._args = process.argv.slice(3);
-	
-	require(script);
-
 })(global);

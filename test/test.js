@@ -26,7 +26,7 @@ steal.test =  {
 	        return false;
 	    }
 	    while(!checkReady()){
-	        java.lang.Thread.currentThread().sleep(300);
+	        this.sleep(300);
 	    }
 	},
 	wait: function( name ) {
@@ -42,7 +42,7 @@ steal.test =  {
 	        return true;
 	    }
 	    while(!checkExists(name)){
-	        java.lang.Thread.currentThread().sleep(300);
+	        this.sleep(300);
 	    }
 	},
 	sleep: function( duration ){
@@ -53,22 +53,16 @@ steal.test =  {
 		for(var n in win) print(n);
 	},
 	deleteDir: function( dir ) {
-		dir = new java.io.File(dir)
-		if (dir.isDirectory()) {
-	        var children = dir.list();
-	        for (var i=0; i<children.length; i++) {
-	            var success = this.deleteDir(new java.io.File(dir, children[i]));
-	            if (!success) return false;
-	            
-	        }
-	    }
-	
-	    // The directory is now empty so delete it
-	    return dir['delete']();
+		var f = new steal.File(dir);
+		if( f.isFile() ){
+			return f.remove();
+		}else{
+			return f.removeDir();
+		}
 	},
 	remove: function() {
 		for(var i=0; i < arguments.length; i++){
-			this.deleteDir(new java.io.File(arguments[i]) )
+			this.deleteDir(arguments[i])
 		}
 	},
 	testNamespace: function() {

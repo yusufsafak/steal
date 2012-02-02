@@ -1,4 +1,3 @@
-load('steal/rhino/rhino.js')
 steal('steal/test', function( s ) {
 
 	s.test.test("options", function(t){
