@@ -2,7 +2,6 @@
 /**
  * Tests compressing a very basic page and one that is using steal
  */
-load('steal/rhino/rhino.js')
 steal('steal/test', 'steal/clean', function( s ) {
 	
 	s.test.module("steal/clean")

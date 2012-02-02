@@ -30,15 +30,16 @@
 		}
 	}
 	
-	var copy = function( jFile1, jFile2 ) {
+	var copy = function( f1, f2 ) {
 		var bufLen = 1024,
 			buf = new Buffer(bufLen),
-			fin = fs.openSync(jFile1, 'r'),
-			fout = fs.openSync(jFile2, 'w');
+			fin = fs.openSync(f1, 'r'),
+			fout = fs.openSync(f2, 'w');
 
 		var len, pos = 0;
 		while ( (len = fs.readSync(fin, buf, 0, bufLen, pos)) > 0 ) {
-			fs.writeSync(fout, buf, 0, len);
+			fs.writeSync(fout, buf, 0, len, pos);
+			pos += len;
 		}
 		
 		fs.closeSync(fin);
@@ -200,29 +201,28 @@
 			return path.existsSync(this.path);
 		},
 		copyTo: function( dest, ignore ) {
-			/*
-			var me = new java.io.File(this.path)
-			var you = new java.io.File(dest);
-			if ( me.isDirectory() ) {
-				var children = me.list();
-				for ( var i = 0; i < children.length; i++ ) {
-					var newMe = new java.io.File(me, children[i]);
-					var newYou = new java.io.File(you, children[i]);
-					if ( ignore && ignore.indexOf("" + newYou.getName()) != -1 ) {
-						continue;
+			var st = fs.statSync(this.path);
+			if( st.isDirectory() ){
+				this.contents(function( file, type ){
+					// if no files to ignore, or file not in ignore list
+					if( !ignore || ignore.indexOf(file) == -1 ){
+						var oldPath = path.join(this.path, file);
+						if( type == 'directory' ){
+							// create the new directory under dest, and recursively copyTo it
+							var newPath = path.join(dest, file);
+							fs.mkdirSync(newPath);
+							new steal.File(oldPath).copyTo(newPath);
+						}else{
+							// just copying a file
+							copy(oldPath, newPath);
+						}
 					}
-					if ( newMe.isDirectory() ) {
-						newYou.mkdir();
-						new steal.File(newMe.path).copyTo(newYou.path, ignore)
-					} else {
-						copy(newMe, newYou)
-					}
-				}
-				return this;
+				});
+			}else{
+				// just copying a file
+				copy(this.path, dest);
 			}
-			copy(me, you)
 			return this;
-			*/
 		},
 		moveTo: function(dest){
 			try {

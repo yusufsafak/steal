@@ -26,6 +26,10 @@
 		console.log.apply(console, arguments);
 	};
 	
+	win.quit = function(){
+		process.exit();
+	};
+	
 	require("steal/steal.js");
 	require("steal/node/file.js");
 	require("steal/node/system.js");
