@@ -669,7 +669,7 @@
 				( domain && !uriDomain );
 		},
 		isRelativeToDomain : function(){
-			return !this.path.indexOf("/");
+			return ! this.domain() && this.path.substr(0,1) == "/";
 		},
 		hash : function(){
 			return this.fragment ? "#"+this.fragment : ""
@@ -681,14 +681,18 @@
 		add : function(uri){
 			return this.join(uri)+'';
 		},
+		isAbsolute: function() {
+			return !! ( this.protocol && this.host );
+		},
 		join : function(uri, min){
 			uri = URI(uri);
-			if ( uri.isCrossDomain( this )) {
+			if ( uri.isCrossDomain( this ) || uri.isAbsolute() ) {
 				return uri;
 			}
 			if ( uri.isRelativeToDomain() ) {
 				return URI( this.domain() + uri )
 			}
+
 			// at this point we either 
 			// - have the same domain
 			// - this has a domain but uri does not
@@ -1476,7 +1480,7 @@ each( extend( {
 			callback = function() {
 				if ( ! script.readyState || stateCheck.test( script.readyState )) {
 					cleanUp(script);
-					success(script);
+					success.call( this, script );
 				}
 			};
 			
@@ -1895,7 +1899,8 @@ request = function( options, success, error ) {
 	
 	
 	
-	/*var name = function(stel){
+	/** /
+	var name = function(stel){
 		if(stel.options && stel.options.type == "fn"){
 			return stel.options.orig.toString().substr(0,50)
 		}
@@ -1912,7 +1917,8 @@ request = function( options, success, error ) {
 	})
 	steal.p.complete = before(steal.p.complete, function(){
 		console.log("complete", name(this), this.id)
-	})*/
+	})
+	/**/
 
 
 
