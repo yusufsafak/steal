@@ -1,6 +1,5 @@
 (function( window, steal, undefined ) {
 
-	console.log = console.info;
 
 	// Grab helper functions off of steal
 	var each			= steal.each,
@@ -213,9 +212,6 @@
 
 		},
 		process = function( dep, holdCallbacks ) {
-			console.group("process", dep, holdCallbacks );
-			console.log("idQueue\t", idQueue)
-			console.log("defineQueue\t", defineQueue)
 
 			var args, id, index;
 
@@ -228,7 +224,6 @@
 				args = defineQueue.pop();
 				id = idQueue.pop();
 			}
-			console.groupEnd();
 			if ( args ) {
 
 				// Set id if anonymous
@@ -248,12 +243,10 @@
 			}
 		},
 		runCallbacks = function() {
-			console.log("running callbacks", callbacks);
 			var temp	= callbacks.pop(),
 				deps	= temp.shift(),
 				cb		= temp.shift(),
 				args	= getArgs( deps );
-			console.log("args", args, defining);
 
 			cb.apply( window, args );
 
@@ -276,7 +269,6 @@
 		// define ("foo", ["bar", "lol", "wat"], function() {});
 		// define ("foo", ["bar", "lol", "wat"], {});
 		define: function( id, deps, factory ) {
-			console.log( "define", arguments );
 
 			var dfd = new Deferred();
 
@@ -342,7 +334,6 @@
 		},
 
 		require: function( deps, callback ) {
-			console.log( "require", arguments );
 
 			var pluginsArr = [],
 				pluginsDfd = new Deferred(),
@@ -351,7 +342,6 @@
 			// Synchronous call
 			if ( isString( deps )) {
 
-				console.log( "SYNC CALL", deps );
 
 				if ( modules[ deps ] ) {
 					return modules[ deps ];
@@ -378,7 +368,6 @@
 				// Make sure we don't load anything until we have all the
 				// plugins
 				pluginsDfd.done(function() {
-					console.log("okay calling actual require now", deps);
 					
 					// Add callback to stack
 					if ( callback ) {
@@ -399,7 +388,6 @@
 
 						// Get the URIs of all the unmet dependencies
 						uris = resolveUris( unmet )
-						console.log( "uris", uris );
 
 						// Get a single callback for when all the unmet
 						// dependencies have loaded
@@ -432,11 +420,9 @@
 									dep;
 
 
-								console.log("DEP IS", dep, normalized );
 
 								plugins[ plugin ].load( normalized, require, load, {});
 							} else {
-								console.log( "Stealing", dep );
 								steal({
 									src: dep,
 									type: "js",
@@ -448,9 +434,7 @@
 							}
 							return innerDeferred;
 						})).done(function() {
-							console.log("continuing");
 							var shouldProcess = true;
-							//console.log( "in done for", unmet );
 
 							// Clean up our requiring list for circular deps 
 							each( unmet, function( i, id ) {
@@ -475,17 +459,14 @@
 				});
 
 				if ( pluginsArr.length ) {
-					console.log("ZOMG WE NEED THESE PLUGINS", pluginsArr);
 					Deferred.when.apply( Deferred, map( pluginsArr, function( plugin ) {
 						var dep = idToUri( plugin ),
 							innerDeferred = new Deferred();
 
-						console.log("LOADING PLUGIN", plugin, dep);
 						steal({
 							src: dep,
 							type: "js",
 							onload: function( script ) {
-								console.log("LOADED PLUGIN", plugin, dep);
 								idQueue.push( plugin );
 								process( plugin, false );
 								innerDeferred.resolve();
@@ -493,7 +474,6 @@
 						});
 						return innerDeferred;
 					})).done(function() {
-						console.log("plugins loaded!", plugins);
 						pluginsDfd.resolve();
 					})
 				} else {
