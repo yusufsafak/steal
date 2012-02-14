@@ -153,7 +153,7 @@ steal(function( steal ) {
 		
 		if ( url.match(/^file\:/) ) {
 			url = url.replace("file:/", "");
-			text = readFile("/" + url);
+			text = steal.File("/" + url).read();
 		}
 
 		if ( url.match(/^http\:/) ) {

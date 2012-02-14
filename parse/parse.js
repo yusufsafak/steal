@@ -170,7 +170,7 @@ steal.parse = function(str){
 								return token;
 							}
 						}else if(token.value === "/"){
-							print("YOU SHOULD NOT BE HERE")
+							steal.print("YOU SHOULD NOT BE HERE")
 							this.comment();
 						}
 					}

@@ -2,7 +2,7 @@ steal("steal/generate/ejs.js", 'steal/generate/inflector.js',
 	'steal/parse', function( steal ) {
 
 	var render = function( from, to, data ) {
-		var text = readFile(from);
+		var text = steal.File(from).read();
 
 		var res = new steal.EJS({
 			text: text,
@@ -10,7 +10,7 @@ steal("steal/generate/ejs.js", 'steal/generate/inflector.js',
 		}).render(data);
 		var file = steal.File(to);
 		//check if we are overwriting
-		if ( data.force || !file.exists() || readFile(to) == res || steal.prompt.yesno("Overwrite " + to + "? [Yn]") ) {
+		if ( data.force || !file.exists() || steal.File(to).read() == res || steal.prompt.yesno("Overwrite " + to + "? [Yn]") ) {
 			steal.File(to).save(res);
 			return true;
 		} else {
@@ -157,7 +157,7 @@ steal("steal/generate/ejs.js", 'steal/generate/inflector.js',
 							}
 
 						} else if (/\.link$/.test(name) ) {
-							var copy = readFile(path + "/" + loc);
+							var copy = steal.File(path + "/" + loc).read();
 							//if points to a file, copy that one file; otherwise copy the folder
 							steal.generate(copy, where + "/" + convert.replace(/\.link$/, ""), data);
 
@@ -228,7 +228,7 @@ steal("steal/generate/ejs.js", 'steal/generate/inflector.js',
 		},
 		insertCode: function( destination, newCode ){
 			// get file, parse it
-			var fileTxt = readFile(destination),
+			var fileTxt = steal.File(destination).read(),
 				parser =  steal.parse(fileTxt),
 				tokens = [],
 				lastToken,
@@ -276,7 +276,7 @@ steal("steal/generate/ejs.js", 'steal/generate/inflector.js',
 		 */
 		insertSteal: function( destination, newStealPath, newline ){
 			// get file, parse it
-			var fileTxt = readFile(destination),
+			var fileTxt = steal.File(destination).read(),
 				parser =  steal.parse(fileTxt),
 				tokens = [],
 				lastToken,

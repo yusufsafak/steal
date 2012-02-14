@@ -11,7 +11,7 @@
 				return new steal.File(path)
 			}
 			this.path = path;
-		}
+		};
 	}
 	
 	var copy = function( jFile1, jFile2 ) {
@@ -49,6 +49,7 @@
 			inarr.close();
 		}
 	}
+	
 	extend(steal.File.prototype, {
 		/**
 		 * Removes hash and params
@@ -211,6 +212,9 @@
 			var me = new java.io.File(this.path)
 			me.setExecutable(true);
 			return this;
+		},
+		read: function( encoding ){
+			return readFile(this.path, encoding || "UTF-8");
 		},
 		save: function( src, encoding ) {
 			var fout = new java.io.FileOutputStream(new java.io.File(this.path));

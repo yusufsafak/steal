@@ -1,0 +1,4 @@
+{
+	"name": "StealJS",
+	"main": "./node/bootstrap.js"
+}

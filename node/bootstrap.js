@@ -1,10 +1,19 @@
+global.steal = {
+	engine : "node",
+	
+	types : {
+		"js" : function(options, success){
+			if(options.text){
+				eval(text);
+			}else{
+				require(options.src);
+			}
+			success();
+		}
+	}
+};
+
 require("steal/node/node.js");
 
-(function(win){
-	
-	var script = process.argv[2]
-	win._args = process.argv.slice(3);
-
-	require(script);
-	
-})(global);
+steal.args = process.argv.slice(2);
+steal.env = process.env;

@@ -27,7 +27,7 @@
 				return new steal.File(path)
 			}
 			this.path = path;
-		}
+		};
 	}
 	
 	var copy = function( f1, f2 ) {
@@ -71,6 +71,7 @@
 		}
 		*/
 	}
+	
 	extend(steal.File.prototype, {
 		/**
 		 * Removes hash and params
@@ -126,9 +127,7 @@
 				var u = new steal.File(url);
 				if (!u.domain() ) return this.path;
 				return u.protocol() + "//" + u.domain() + this.path;
-			}
-			else {
-
+			} else {
 				if ( url == '' ) return this.path.replace(/\/$/, '');
 				var urls = url.split('/'),
 					paths = this.path.split('/'),
@@ -236,19 +235,11 @@
 			fs.chmodSync(this.path, 0755);
 			return this;
 		},
+		read: function( encoding ){
+			return fs.readFileSync(this.path, encoding || 'utf8');
+		},
 		save: function( src, encoding ) {
-			fs.writeFileSync(this.path, src, 'utf8');
-			/*
-			var fout = new java.io.FileOutputStream(new java.io.File(this.path));
-
-			var out = new java.io.OutputStreamWriter(fout, "UTF-8");
-			var s = new java.lang.String(src || "");
-
-			var text = new java.lang.String((s).getBytes(), encoding || "UTF-8");
-			out.write(text, 0, text.length());
-			out.flush();
-			out.close();
-			*/
+			fs.writeFileSync(this.path, src, encoding || 'utf8');
 		},
 		download_from: function( address ) {
 			throw new Error('steal.File.download_from not implemented');
@@ -447,7 +438,7 @@
 	steal.print = function(){
 
 		if(typeof STEALPRINT == "undefined" || STEALPRINT !== false){
-			print.apply(null, arguments)
+			console.log.apply(console, arguments);
 		}
 	}
 	

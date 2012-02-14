@@ -196,8 +196,8 @@ String.prototype.tokens = function (prefix, suffix) {
             if (c >= 'a' && c <= 'z') {
                 str += c;
                 i += 1;
-				print(this.substr(i-20,20))
-				print(this.substr(i,20))				
+				//print(this.substr(i-20,20))
+				//print(this.substr(i,20))				
                 make('number', str).error("Bad number");
             }
 

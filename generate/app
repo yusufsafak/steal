@@ -1,12 +1,14 @@
 // _args = ['cookbook']; load('steal/generate/app')
 
-if (!_args[0]) {
+require('steal');
+
+if (!steal.args[0]) {
 	print("Usage: steal/js steal/generate/app path");
 	quit();
 }
 
 steal('steal/generate',function(steal){
-	var path =  _args[0].toLowerCase().replace('.',"/");
+	var path =  steal.args[0].toLowerCase().replace('.',"/");
 	var	data = steal.extend({
 		path: path, 
 		application_name: path.match(/[^\/]*$/)[0],
@@ -15,5 +17,4 @@ steal('steal/generate',function(steal){
 	}, steal.system);
 	
 	steal.generate("steal/generate/templates/app", path, data);
-	
 });
