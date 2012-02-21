@@ -2,7 +2,7 @@ var fs = require('fs'),
 	murl = require('url'),
 	jsdom = require('jsdom');
 
-steal(/*'steal/build/scripts', */function(s){
+steal(function(s){
 	// Methods for walking through steal and its dependencies
 	
 	// which steals have been touched in this cycle

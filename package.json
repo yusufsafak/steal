@@ -3,6 +3,6 @@
 	"main": "./node/bootstrap.js",
 	"dependencies": {
 		"jsdom": ">= 0.2.0",
-		"uglify": ">= 1.2.0"
+		"uglify-js": ">= 1.2.0"
 	}
 }
