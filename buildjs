@@ -1,4 +1,5 @@
-load("steal/rhino/rhino.js");
+require('steal');
+
 steal('steal/build',
 	  'steal/build/scripts',
 	  'steal/build/styles', 
@@ -7,9 +8,9 @@ steal('steal/build',
 function () {
     //check if args
     var urls = [];
-    while (_args.length) {
-        if (_args[0].indexOf('-') !== 0) {
-            urls.push(_args.shift());
+    while (steal.args.length) {
+        if (steal.args[0].indexOf('-') !== 0) {
+            urls.push(steal.args.shift());
         } else {
             break;
         }
@@ -18,7 +19,7 @@ function () {
     if (urls.length > 1) {
         steal.build.apps(urls);
     } else {
-        steal.build(urls[0], _args);
+        steal.build(urls[0], steal.args);
     }
 
 });

@@ -2,10 +2,6 @@
 /*global steal : false, Envjs : false, jQuery : false*/
 
 steal(function( steal ) {
-	var window = (function() {
-		return this;
-	}).call(null, 0);
-
 	/**
 	 * 
 	 * @parent stealjs
@@ -129,39 +125,11 @@ steal(function( steal ) {
 				steal.build.builders.scripts(opener, options, dependencies);
 			}
 		});
-
-		
-		
 	};
 
 	// a place for the builders
 	steal.build.builders = {}; //builders
 	// a helper function that gets the src of a script and returns
 	// the content for that script
-	
-	
-	
-	steal.build.loadScriptText = function( src ) {
-		var text = "",
-			base = "" + window.location,
-			url = src.match(/([^\?#]*)/)[1];
-
-		if ( url.match(/^\/\//) ) {
-			url = steal.root.join(url.substr(2)); //can steal be removed?
-		}
-		url = Envjs.uri(url, base);
-		
-		if ( url.match(/^file\:/) ) {
-			url = url.replace("file:/", "");
-			text = steal.File("/" + url).read();
-		}
-
-		if ( url.match(/^http\:/) ) {
-			text = readUrl(url);
-		}
-		return text;
-	};
-	
-	
 
 }).then('steal/build/open.js');
