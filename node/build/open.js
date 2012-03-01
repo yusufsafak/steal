@@ -1,6 +1,7 @@
 var fs = require('fs'),
 	murl = require('url'),
-	jsdom = require('jsdom');
+	jsdom = require('jsdom'),
+	xhr = require('xmlhttprequest');
 
 steal(function(s){
 	// Methods for walking through steal and its dependencies
@@ -143,6 +144,9 @@ steal(function(s){
 
 		// let us see page output
 		win.console = console;
+
+		// patch in a working XHR
+		win.XMLHttpRequest = xhr.XMLHttpRequest;
 
 		win.addEventListener('error', function(err, url, lineNum){
 			console.log('============ ERROR =============');
