@@ -1,13 +1,11 @@
+var fs = require('fs');
+
 global.steal = {
 	engine : "node",
 	
 	types : {
 		"js" : function(options, success){
-			if(options.text){
-				eval(text);
-			}else{
-				require(options.src);
-			}
+			eval(options.text || fs.readFileSync(options.src, 'utf8'));
 			success();
 		}
 	}

@@ -18,8 +18,8 @@ steal('steal/build').then(function( steal ) {
 			currentPackage = [];
 
 		opener.each('css', function( link, text, i ) {
-			steal.print("   " + link.rootSrc)
-			scriptsConverted.push(link.rootSrc)
+			steal.print("   " + link.rootSrc);
+			scriptsConverted.push(link.rootSrc);
 			var converted = convert(text, link.rootSrc, folder);
 			currentPackage.push(converted)
 		});

@@ -14,7 +14,7 @@ steal(function(s){
 		// depth - true if it should be depth first search, defaults to breadth
 		iterate = function(stl, CB, depth){
 			// load each dependency until
-			var i =0,
+			var i = 0,
 				depends = stl.dependencies.slice(0); 
 
 			// this goes through the scripts until it finds one that waits for 
@@ -101,7 +101,7 @@ steal(function(s){
 
 		// what gets called by steal.done
 		var html = fs.readFileSync(url, 'utf8'),
-			dom = jsdom.jsdom(html, null, { url: url }),
+			dom = jsdom.jsdom(html, null, { url: steal.File(url).joinFrom(process.cwd()) }),
 			win = dom.createWindow(),
 
 			doneCb = function(init){
@@ -135,23 +135,36 @@ steal(function(s){
 							}
 						}, depth);
 					},
-					steal: win.steal,
+					steal: steal,
 					url: url,
 					firstSteal: init
 				});
 			};
-		
-		win.onload = function(){
+
+		// let us see page output
+		win.console = console;
+
+		win.addEventListener('error', function(err, url, lineNum){
+			console.log('============ ERROR =============');
+			console.log(err, url, lineNum);
+			console.log(err.stack);
+			return false;
+		}, false);
+			
+		win.addEventListener('load', function(){
 			// if there's timers (like in less) we'll never reach next line 
 			// unless we bind to done here and kill timers
 			win.steal.one('done', function(init){
 				// prevent $(document).ready from being called even though load is fired
-				//win.jQuery && win.jQuery.readyWait++;
+				if( win.jQuery ){
+					win.jQuery.readyWait++;
+				}
 
 				// fire the done callback
+				//steal.rootUrl(win.steal.rootUrl());
 				doneCb(init);
 			});
-		};
+		}, false);
 	};
 	
 	var loadScriptText = function( win, options ){
@@ -169,12 +182,12 @@ steal(function(s){
 		url = murl.resolve(base, url);
 		
 		if( url.match(/^https?\:/) ){
-			text = ''; //readUrl(url);
+			text = ''; // TODO: readUrl(url);
 		}else{
 			if( url.match(/^file\:/) ){
 				url = url.replace("file:/", "");
 			}
-			text = fs.readFileSync(url);
+			text = fs.readFileSync(url, 'utf8');
 		}
 
 		return text;
