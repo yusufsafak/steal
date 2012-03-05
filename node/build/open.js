@@ -1,7 +1,6 @@
 var fs = require('fs'),
 	murl = require('url'),
-	jsdom = require('jsdom'),
-	xhr = require('xmlhttprequest');
+	jsdom = require('jsdom');
 
 steal(function(s){
 	// Methods for walking through steal and its dependencies
@@ -100,11 +99,30 @@ steal(function(s){
 			cb = stealData;
 		}
 
-		// what gets called by steal.done
-		var html = fs.readFileSync(url, 'utf8'),
-			dom = jsdom.jsdom(html, null, { url: steal.File(url).joinFrom(process.cwd()) }),
+		// hook into loader so we know when steal and jquery are loaded
+		var loader = jsdom.dom.level3.html.resourceLoader,
+			oldLoad = loader.load;
+
+		loader.load = function(element, href, callback){
+			oldLoad.call(loader, element, href, callback);
+
+			if( href.indexOf('jquery.js') >= 0 ){
+				element.addEventListener('load', function(){
+					win.jQuery.readyWait++;
+				}, false);
+			}else if( href.indexOf('steal.js') >= 0 ){
+				element.addEventListener('load', function(){
+					win.steal.one('done', doneCb);
+				}, false);
+			}
+		};
+
+		var	html = fs.readFileSync(url, 'utf8'),
+			url = steal.File(url).joinFrom(process.cwd()),
+			dom = jsdom.jsdom(html, null, { url: url }),
 			win = dom.createWindow(),
 
+			// what gets called by steal.done
 			doneCb = function(init){
 				// callback with the following
 				cb({
@@ -142,32 +160,46 @@ steal(function(s){
 				});
 			};
 
-		// let us see page output
-		win.console = console;
+		steal.extend(win, {
+			// let us see page output
+			console: console,
 
-		// patch in a working XHR
-		win.XMLHttpRequest = xhr.XMLHttpRequest;
+			// stub
+			postMessage: function(){},
+
+			// patch in a barebones XHR for getting steal resources
+			XMLHttpRequest: function(){}
+		});
+
+		steal.extend(win.XMLHttpRequest.prototype, {
+			// dummy element for loading ajax requests
+			script: dom.createElement('script'),
+
+			setRequestHeader: function(){},
+
+			open: function(method, url){
+				this.src = url;
+				this.readyState = 0;
+			},
+			
+			send: function(){
+				loader.load(this.script, this.src, function(data, url){
+					this.responseText = data;
+					this.readyState = 4;
+					this.status = 200;
+
+					if( this.onreadystatechange ){
+						this.onreadystatechange();
+					}
+				}.bind(this));
+			}
+		});
 
 		win.addEventListener('error', function(err, url, lineNum){
 			console.log('============ ERROR =============');
 			console.log(err, url, lineNum);
 			console.log(err.stack);
 			return false;
-		}, false);
-			
-		win.addEventListener('load', function(){
-			// if there's timers (like in less) we'll never reach next line 
-			// unless we bind to done here and kill timers
-			win.steal.one('done', function(init){
-				// prevent $(document).ready from being called even though load is fired
-				if( win.jQuery ){
-					win.jQuery.readyWait++;
-				}
-
-				// fire the done callback
-				//steal.rootUrl(win.steal.rootUrl());
-				doneCb(init);
-			});
 		}, false);
 	};
 	
@@ -180,7 +212,7 @@ steal(function(s){
 		// to the filesystem
 		var src = options.src,
 			text = "",
-			base = "" + win.location,
+			base = win.location.href,
 			url = src.match(/([^\?#]*)/)[1];
 		
 		url = murl.resolve(base, url);

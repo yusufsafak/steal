@@ -5,7 +5,14 @@ global.steal = {
 	
 	types : {
 		"js" : function(options, success){
-			eval(options.text || fs.readFileSync(options.src, 'utf8'));
+			//console.log('js',options)
+			try{
+				eval(options.text || fs.readFileSync(options.src, 'utf8'));
+			}catch(e){
+				console.log(e);
+				console.log(e.stack);
+				throw e;
+			}
 			success();
 		}
 	}
