@@ -117,6 +117,7 @@ steal(function(s){
 				}, false);
 			}else if( href.indexOf('steal.js') >= 0 ){
 				element.addEventListener('load', function(){
+					win.steal.isBuilding = true;
 					win.steal.one('done', doneCb);
 				}, false);
 			}
@@ -217,6 +218,10 @@ steal(function(s){
 	};
 	
 	var loadScriptText = function( win, options ){
+		if(options._skip){ // if we skip this script, we don't care about its contents
+			return "";
+		}
+		
 		if(options.text){
 			return options.text;
 		}
