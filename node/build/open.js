@@ -106,6 +106,11 @@ steal(function(s){
 		loader.load = function(element, href, callback){
 			oldLoad.call(loader, element, href, callback);
 
+			element.addEventListener('error', function(ev){
+				console.log('script error', href)
+				//console.log(ev.error.stack)
+			});
+
 			if( href.indexOf('jquery.js') >= 0 ){
 				element.addEventListener('load', function(){
 					win.jQuery.readyWait++;
@@ -117,14 +122,23 @@ steal(function(s){
 			}
 		};
 
-		var	html = fs.readFileSync(url, 'utf8'),
-			url = steal.File(url).joinFrom(process.cwd()),
+		var	url = steal.File(url).joinFrom(process.cwd()),
+			html = fs.readFileSync(url, 'utf8'),
 			dom = jsdom.jsdom(html, null, { url: url }),
 			win = dom.createWindow(),
 
 			// what gets called by steal.done
-			doneCb = function(init){
+			doneCb = function doneCb(init){
+				console.log('INNER STEAL DONE')
+
+				// steal the window's steal.root
+				steal.rootUrl(win.steal.rootUrl());
+				console.log(steal.root.path)
+
+				//console.log(JSON.stringify(init, null, '  '))
+				//process.exit();
 				// callback with the following
+
 				cb({
 					/**
 					 * @hide
@@ -154,14 +168,13 @@ steal(function(s){
 							}
 						}, depth);
 					},
-					steal: steal,
+					steal: win.steal,
 					url: url,
 					firstSteal: init
 				});
 			};
-
+		
 		steal.extend(win, {
-			// let us see page output
 			console: console,
 
 			// stub
