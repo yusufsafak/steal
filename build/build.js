@@ -111,7 +111,6 @@ steal(function( steal ) {
 		steal.print("Building to " + options.to);
 
 		steal.build.open(url, function(opener){
-			console.log('steal.build.open',opener)
 			// iterates through the types of builders.  For now
 			// there are just scripts and styles builders
 			for ( var builder in steal.build.builders ) {

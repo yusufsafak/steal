@@ -1,6 +1,6 @@
 var fs = require('fs'),
 	murl = require('url'),
-	jsdom = require('jsdom');
+	phantom = require('phantom');
 
 steal(function(s){
 	// Methods for walking through steal and its dependencies
@@ -99,151 +99,113 @@ steal(function(s){
 			cb = stealData;
 		}
 
-		// hook into loader so we know when steal and jquery are loaded
-		var loader = jsdom.dom.level3.html.resourceLoader,
-			oldLoad = loader.load;
+		var pageRoot;
 
-		loader.load = function(element, href, callback){
-			oldLoad.call(loader, element, href, callback);
-
-			element.addEventListener('error', function(ev){
-				console.log('script error', href)
-				//console.log(ev.error.stack)
-			});
-
-			if( href.indexOf('jquery.js') >= 0 ){
-				element.addEventListener('load', function(){
-					win.jQuery.readyWait++;
-				}, false);
-			}else if( href.indexOf('steal.js') >= 0 ){
-				element.addEventListener('load', function(){
-					win.steal.isBuilding = true;
-					win.steal.one('done', doneCb);
-				}, false);
-			}
-		};
-
-		var	url = steal.File(url).joinFrom(process.cwd()),
-			html = fs.readFileSync(url, 'utf8'),
-			dom = jsdom.jsdom(html, null, { url: url }),
-			win = dom.createWindow(),
-
-			// what gets called by steal.done
-			doneCb = function doneCb(init){
-				console.log('INNER STEAL DONE')
-
-				// steal the window's steal.root
-				steal.rootUrl(win.steal.rootUrl());
-				console.log(steal.root.path)
-
-				//console.log(JSON.stringify(init, null, '  '))
-				//process.exit();
-				// callback with the following
-
-				cb({
-					/**
-					 * @hide
-					 * Goes through each steal and gives its content.
-					 * How will this work with packages?
-					 * @param {Object} [type] the tag to get
-					 * @param {Object} func a function to call back with the element and its content
-					 */
-					each: function( filter, func ) {
-						// reset touched
-						touched = {};
-						if ( !func ) {
-							func = filter;
-							filter = function(){return true;};
-						}
-
-						if(typeof filter == 'string'){
-							var resource = filter;
-							filter = function(stl){
-								return stl.options.buildType === resource;
+		phantom.create(['--local-to-remote-url-access=yes'], function(ph){
+			ph.createPage(function(page){
+				page.set('onResourceReceived', function(res){
+					if(res.stage == 'end'){
+						if(/steal\.js/.test(res.url)){
+							page.evaluate(function(){
+								steal.isBuilding = true;
+								steal.one('done', function(deps){
+									alert(JSON.stringify(deps));
+								});
+								return steal.root.path;
+							}, function(result){
+								pageRoot = result;
+								console.log('pageRoot=', pageRoot);
+							});
+						}else{
+							if(/jquery\.js/.test(res.url)){
+								page.evaluate(function(){
+									jQuery.readyWait++;
+								});
 							}
 						}
-						
-						iterate(init, function(stealer){
-							if(filter(stealer)){
-								func(stealer.options, loadScriptText(win, stealer.options), stealer);
-							}
-						}, depth);
-					},
-					steal: win.steal,
-					url: url,
-					firstSteal: init
-				});
-			};
-		
-		steal.extend(win, {
-			console: console,
-
-			// stub
-			postMessage: function(){},
-
-			// patch in a barebones XHR for getting steal resources
-			XMLHttpRequest: function(){}
-		});
-
-		steal.extend(win.XMLHttpRequest.prototype, {
-			// dummy element for loading ajax requests
-			script: dom.createElement('script'),
-
-			setRequestHeader: function(){},
-
-			open: function(method, url){
-				this.src = url;
-				this.readyState = 0;
-			},
-			
-			send: function(){
-				loader.load(this.script, this.src, function(data, url){
-					this.responseText = data;
-					this.readyState = 4;
-					this.status = 200;
-
-					if( this.onreadystatechange ){
-						this.onreadystatechange();
 					}
-				}.bind(this));
-			}
+				});
+				page.set('onAlert', function(msg){
+					console.log('here?')
+					try{
+						var deps = JSON.parse(msg);
+						if(deps.dependencies){
+							setTimeout(function(){
+								doneCb(deps);
+							}, 0);
+							ph.exit();
+						}
+					}catch(e){}
+				});
+				page.open(url);
+			});
 		});
 
-		win.addEventListener('error', function(err, url, lineNum){
-			console.log('============ ERROR =============');
-			console.log(err, url, lineNum);
-			console.log(err.stack);
-			return false;
-		}, false);
-	};
-	
-	var loadScriptText = function( win, options ){
-		if(options._skip){ // if we skip this script, we don't care about its contents
-			return "";
-		}
-		
-		if(options.text){
-			return options.text;
-		}
-		
-		// src is relative to the page, we need it relative
-		// to the filesystem
-		var src = options.src,
-			text = "",
-			base = win.location.href,
-			url = src.match(/([^\?#]*)/)[1];
-		
-		url = murl.resolve(base, url);
-		
-		if( url.match(/^https?\:/) ){
-			text = ''; // TODO: readUrl(url);
-		}else{
-			if( url.match(/^file\:/) ){
-				url = url.replace("file:/", "");
-			}
-			text = fs.readFileSync(url, 'utf8');
+		// what gets called by steal.done
+		function doneCb(init){
+			console.log('page load completed')
+			cb({
+				/**
+				 * @hide
+				 * Goes through each steal and gives its content.
+				 * How will this work with packages?
+				 * @param {Object} [type] the tag to get
+				 * @param {Object} func a function to call back with the element and its content
+				 */
+				each: function( filter, func ) {
+					// reset touched
+					touched = {};
+					if ( !func ) {
+						func = filter;
+						filter = function(){return true;};
+					}
+
+					if(typeof filter == 'string'){
+						var resource = filter;
+						filter = function(stl){
+							return stl.options.buildType === resource;
+						}
+					}
+					
+					iterate(init, function(stealer){
+						if(filter(stealer)){
+							func(stealer.options, loadScriptText(stealer.options), stealer);
+						}
+					}, depth);
+				},
+				steal: steal,
+				url: url,
+				firstSteal: init
+			});
 		}
 
-		return text;
+		function loadScriptText(options){
+			if(options._skip){ // if we skip this script, we don't care about its contents
+				return "";
+			}
+			
+			if(options.text){
+				return options.text;
+			}
+			
+			// src is relative to the page, we need it relative
+			// to the filesystem
+			var src = options.src,
+				url = src.match(/([^\?#]*)/)[1],
+				text = "";
+			
+			url = murl.resolve(pageRoot, url);
+			
+			if( url.match(/^https?\:/) ){
+				text = ''; // TODO: readUrl(url);
+			}else{
+				if( url.match(/^file\:/) ){
+					url = url.replace("file://", "");
+				}
+				text = fs.readFileSync(url, 'utf8');
+			}
+
+			return text;
+		}
 	};
 });
