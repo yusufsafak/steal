@@ -8,7 +8,7 @@ if (!steal.args[0]) {
 }
 
 steal('steal/generate',function(steal){
-	var path =  steal.args[0].toLowerCase().replace('.',"/");
+	var path =  steal.args[1].toLowerCase().replace('.',"/");
 	var	data = steal.extend({
 		path: path, 
 		application_name: path.match(/[^\/]*$/)[0],
